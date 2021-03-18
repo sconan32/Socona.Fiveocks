@@ -38,7 +38,7 @@ namespace Socona.Fiveocks.Cli
             {
                 while (true)
                 {
-                    await Task.Delay(5000);
+                    await Task.Delay(10000);
                     TestServer("210.30.97.227", 10089, "www.baidu.com", 443);
                 }
             });
@@ -52,29 +52,35 @@ namespace Socona.Fiveocks.Cli
 
                 Socks5Client.Socks5Client p = new Socks5Client.Socks5Client(socks5Server, sock5ServerPort, target, targetPort);
                 // p.OnConnected += p_OnConnected;
-                if ( await p.ConnectAsync())
+                if (await p.ConnectAsync())
                 {
-                     
+
                     using var memoryOwner = MemoryPool<byte>.Shared.Rent();
                     var memory = memoryOwner.Memory;
                     var recv = await p.ReceiveAsync(memory);
-                    using FileStream fileStream = File.OpenWrite($"T{DateTime.Now:s}.txt");
-                    using StreamWriter sw = new StreamWriter(fileStream);
-                    sw.Write(memory.Slice(0, recv));
+                    if (recv <= 0)
+                    {
+                        Console.WriteLine("E ====        CHK NET        ====");
+                        return;
+                    }
 
-                    while(recv>0)
+                    using FileStream fileStream = File.OpenWrite($"T{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.txt");
+
+                    fileStream.Write(memory.Slice(0, recv).Span);
+
+                    while (recv > 0)
                     {
                         recv = await p.ReceiveAsync(memory);
-                        sw.Write(memory.Slice(0, recv));
+                        fileStream.Write(memory.Slice(0, recv).Span);
                     }
-                    sw.Close();
+                    fileStream.Close();
 
-                    Console.WriteLine("i ====       TEST OK       ====");                  
+                    Console.WriteLine("i ====       TEST OK       ====");
                     p.Disconnect();
                 }
                 else
                 {
-                    Console.WriteLine("E ====        CHK NET        ====");                    
+                    Console.WriteLine("E ====        CHK NET        ====");
                 }
                 //p.Send(new byte[] {0x11, 0x21});
 

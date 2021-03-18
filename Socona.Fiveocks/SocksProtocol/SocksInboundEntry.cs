@@ -17,62 +17,57 @@ namespace Socona.Fiveocks.SocksProtocol
 {
     public class SocksInboundEntry : IInboundEntry
     {
-
         Socket Socket { get; set; }
 
         SocksRequest Request { get; set; }
-
 
         public SocksInboundEntry(Socket socket)
         {
             Socket = socket;
         }
 
-        public async Task<IForwardingTunnel> CreateForwardingTunnelAsync(CancellationToken token = default)
+        public async Task<IForwardingTunnel> CreateForwardingTunnelAsync(CancellationToken cancellationToken = default)
         {
-
-            var authTypes = await ReceiveAuthTypesAsync(token);
-
-            if (!await AuthenticateClientAsync(authTypes, token))
+            var authTypes = await ReceiveAuthTypesAsync(cancellationToken);
+            if (!await AuthenticateClientAsync(authTypes, cancellationToken))
             {
                 return null;
             }
-            var socksRequest = await ReceiveSocksRequestAsync(token);
 
+            var socksRequest = await ReceiveSocksRequestAsync(cancellationToken);
             if (socksRequest == null)
             {
                 return null;
             }
-           
-
 
             return new DirectForwardingTunnel(socksRequest, this);
         }
 
-        public async Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken token = default)
+        public async Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            return await Socket.ReceiveAsync(buffer, SocketFlags.None, token);
+            return await Socket.ReceiveAsync(buffer, SocketFlags.None, cancellationToken);
         }
 
-        public async Task<int> SendAsync(Memory<byte> buffer, CancellationToken token = default)
+        public async Task<int> SendAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            return await Socket.SendAsync(buffer, SocketFlags.None, token);
+            return await Socket.SendAsync(buffer, SocketFlags.None, cancellationToken);
         }
 
-        public async Task<bool> ConnectAsync(CancellationToken token = default)
+        public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
         {
             return await ValueTask.FromResult(true);
         }
+
         /// <summary>
         /// Step3: Get Client Request
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<SocksRequest> ReceiveSocksRequestAsync(CancellationToken token = default)
+        public async Task<SocksRequest> ReceiveSocksRequestAsync(CancellationToken cancellationToken = default)
         {
             using var memoryOwner = MemoryPool<byte>.Shared.Rent();
             var memory = memoryOwner.Memory;
-            int recv = await Socket.ReceiveAsync(memory, SocketFlags.None, token);
+            int recv = await Socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
 
             //+-------+-------+-------+-------+----------+----------+
             //| VER   |  CMD  |  RSV  |  ATYP | DST.ADDR | DST.PORT |
@@ -119,6 +114,7 @@ namespace Socona.Fiveocks.SocksProtocol
             {
                 return null;
             }
+
             short portOriginal = BitConverter.ToInt16(memory.Slice(fwd, 2).Span);
             int port = IPAddress.NetworkToHostOrder(portOriginal);
 
@@ -130,7 +126,7 @@ namespace Socona.Fiveocks.SocksProtocol
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task SendAuthTypeAsync(AuthTypes authType, CancellationToken token = default)
+        public async Task SendAuthTypeAsync(AuthTypes authType, CancellationToken cancellationToken = default)
         {
             //+------+--------+
             //| VER  | METHOD |
@@ -141,7 +137,7 @@ namespace Socona.Fiveocks.SocksProtocol
             var memory = memoryOwner.Memory;
             memory.Span[0] = (byte)HeaderTypes.Socks5;
             memory.Span[1] = (byte)authType;
-            await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, token);
+            await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, cancellationToken);
         }
 
         /// <summary>
@@ -149,11 +145,11 @@ namespace Socona.Fiveocks.SocksProtocol
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<List<AuthTypes>> ReceiveAuthTypesAsync(CancellationToken token = default)
+        public async Task<List<AuthTypes>> ReceiveAuthTypesAsync(CancellationToken cancellationToken = default)
         {
             using var memoryOwner = MemoryPool<byte>.Shared.Rent();
             var memory = memoryOwner.Memory;
-            int recv = await Socket.ReceiveAsync(memory, SocketFlags.None, token);
+            int recv = await Socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
             // +----+----------+----------+
             // |VER | NMETHODS | METHODS  |
             // +----+----------+----------+
@@ -196,12 +192,12 @@ namespace Socona.Fiveocks.SocksProtocol
         /// <param name="authTypes"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<bool> AuthenticateClientAsync(List<AuthTypes> authTypes, CancellationToken token = default)
+        public async Task<bool> AuthenticateClientAsync(List<AuthTypes> authTypes, CancellationToken cancellationToken = default)
         {
 
             if (authTypes == null || authTypes.Count == 0)
             {
-                await SendAuthTypeAsync(AuthTypes.Unsupported, token);
+                await SendAuthTypeAsync(AuthTypes.Unsupported, cancellationToken);
                 Console.WriteLine("FATAL: No Acceptable AuthType. [AuthTypes.None] needed");
                 return false;
             }
@@ -210,17 +206,17 @@ namespace Socona.Fiveocks.SocksProtocol
 
             if (isServerSideLoginEnabled && authTypes.Contains(AuthTypes.Login))
             {
-                await SendAuthTypeAsync(AuthTypes.Login, token);
-                return await CheckUsernamePasswordAsync(token);
+                await SendAuthTypeAsync(AuthTypes.Login, cancellationToken);
+                return await CheckUsernamePasswordAsync(cancellationToken);
             }
             else if (authTypes.Contains(AuthTypes.None))
             {
-                await SendAuthTypeAsync(AuthTypes.None, token);
+                await SendAuthTypeAsync(AuthTypes.None, cancellationToken);
                 return true;
             }
             else
             {
-                await SendAuthTypeAsync(AuthTypes.Unsupported, token);
+                await SendAuthTypeAsync(AuthTypes.Unsupported, cancellationToken);
                 return false;
             }
         }
@@ -230,7 +226,7 @@ namespace Socona.Fiveocks.SocksProtocol
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<bool> CheckUsernamePasswordAsync(CancellationToken token = default)
+        public async Task<bool> CheckUsernamePasswordAsync(CancellationToken cancellationToken = default)
         {
             using var memoryOwner = MemoryPool<byte>.Shared.Rent();
             var memory = memoryOwner.Memory;
@@ -240,7 +236,7 @@ namespace Socona.Fiveocks.SocksProtocol
             // :------+------------------+-----------+------------------+-----------:
             // | 0x01 |      1Byte       |  Variable |     1Byte        | Variable  |
             // '------'------------------'-----------'------------------'-----------'
-            int recv = await Socket.ReceiveAsync(memory, SocketFlags.None, token);
+            int recv = await Socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
             if (recv <= 0 || memory.Span[0] != 0x01)
             {
                 return false;
@@ -262,11 +258,11 @@ namespace Socona.Fiveocks.SocksProtocol
             if (UserLoginServiceProvider.Shared.CreateHandler().HandleLogin(user))
             {
                 memory.Span[1] = 0x00;
-                await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, token);
+                await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, cancellationToken);
                 return true;
             }
             memory.Span[1] = 0x01;
-            await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, token);
+            await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, cancellationToken);
             return false;
         }
 

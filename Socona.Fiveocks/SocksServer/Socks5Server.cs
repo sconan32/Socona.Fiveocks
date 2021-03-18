@@ -1,14 +1,11 @@
 ﻿using Socona.Fiveocks.Plugin;
-using Socona.Fiveocks.Socks;
 using Socona.Fiveocks.TCP;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
 using Socona.Fiveocks.SocksProtocol;
 
 namespace Socona.Fiveocks.SocksServer
@@ -26,12 +23,6 @@ namespace Socona.Fiveocks.SocksServer
         public Stats Stats;
 
         private bool started;
-
-      
-
-      // public event EventHandler OnClientDisconnected;
-
-      //  public event EventHandler OnDebugEvent;
         
         public int Timeout { get; set; }
 
@@ -67,8 +58,6 @@ namespace Socona.Fiveocks.SocksServer
                 return;
             }
             this.started = false;
-
-
             this._clients.Clear();
         }
 
@@ -80,14 +69,6 @@ namespace Socona.Fiveocks.SocksServer
                 this._tcpListener.Start();
                 while (!CancellationToken.IsCancellationRequested)
                 {
-                    for (int i = _clients.Count - 1; i >= 0; i--)
-                    {
-                        if (_clients[i].IsCompleted)
-                        {
-                            _clients.Remove(_clients[i]);
-                            this.Stats.DecreaseClient();
-                        }
-                    }
                     Socket socket = await _tcpListener.AcceptSocketAsync();
                     var task = OnClientConnected(socket);
                 }
@@ -101,11 +82,12 @@ namespace Socona.Fiveocks.SocksServer
 
         }
         private async Task OnClientConnected(Socket socket)
-        {       
+        {
+            IForwardingTunnel forwardingTunnel = null;
             try
             {
                 using SocksProtocol.SocksInboundEntry socksInboundEntry = new SocksProtocol.SocksInboundEntry(socket);
-                IForwardingTunnel forwardingTunnel = await socksInboundEntry.CreateForwardingTunnelAsync( CancellationToken);
+                forwardingTunnel = await socksInboundEntry.CreateForwardingTunnelAsync( CancellationToken);
                 if(forwardingTunnel==null)
                 {
                     return;
@@ -119,23 +101,13 @@ namespace Socona.Fiveocks.SocksServer
             catch(Exception ex)
             {
                 Console.WriteLine(ex.Message);
-            }           
+            }
+            finally
+            {
+                _clients.Remove(forwardingTunnel);
+                this.Stats.DecreaseClient();
+            }
          
-        }
-
-        private void client_onClientDisconnected(object sender, SocksClientEventArgs e)
-        {
-
-        }
-
-        private void ClientDownStreamDataTransfered(object sender, DataEventArgs e)
-        {
-            this.Stats.AddBytes(e.Count, ByteType.Sent);
-        }
-
-        private void ClientUpStreamDataTransfered(object sender, DataEventArgs e)
-        {
-            this.Stats.AddBytes(e.Count, ByteType.Received);
-        }
+        }     
     }
 }

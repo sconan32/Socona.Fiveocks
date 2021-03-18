@@ -10,18 +10,17 @@ using System.Threading.Tasks;
 
 namespace Socona.Fiveocks.SocksProtocol
 {
-    public class DirectOutboundEntry : IOutboundEntry
+    public class Socks5OutboundEntry : IOutboundEntry
     {
         public SocksRequest Request { get; set; }
 
         public Socket Socket { get; private set; }
 
-        public DirectOutboundEntry(SocksRequest request)
+        public Socks5OutboundEntry(SocksRequest request)
         {
             Request = request;
             Socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
         }
-
 
         public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
         {

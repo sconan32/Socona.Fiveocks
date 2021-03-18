@@ -2,12 +2,7 @@
 using Socona.ToolBox.Tools;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,14 +14,16 @@ namespace Socona.Fiveocks.SocksProtocol
         where TOutbound : IOutboundEntry
     {
         public SocksRequest Request { get; set; }
+
         public TInbound Inbound { get; set; }
 
         public TOutbound Outbound { get; set; }
 
         public BandwidthCounter OutCounter { get; set; }
+
         public BandwidthCounter InCounter { get; set; }
 
-        public bool IsCompleted { get; set; }
+        public bool IsCompleted { get; set; } = false;
 
         public ForwardTunnel(SocksRequest request)
         {
