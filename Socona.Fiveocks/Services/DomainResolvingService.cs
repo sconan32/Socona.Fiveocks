@@ -10,9 +10,9 @@ namespace Socona.Fiveocks.Services
     public class DomainResolvingService
     {
 
-        public virtual IPAddress[] ResolveDomain(string domain)
+        public virtual async Task<IPAddress[]> ResolveDomainAsync(string domain)
         {
-            return Dns.GetHostAddresses(domain);
+            return await Dns.GetHostAddressesAsync(domain);
         }
     }
 }

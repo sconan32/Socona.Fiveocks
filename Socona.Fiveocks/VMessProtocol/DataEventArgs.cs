@@ -1,5 +1,5 @@
 ﻿using System;
-using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.SocksProtocol;
 
 namespace Socona.Fiveocks.TCP
 {

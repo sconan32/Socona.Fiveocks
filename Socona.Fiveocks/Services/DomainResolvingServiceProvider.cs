@@ -9,10 +9,10 @@ namespace Socona.Fiveocks.Services
     public class DomainResolvingServiceProvider
     {
 
-        public readonly static DomainResolvingServiceProvider Shared = new DomainResolvingServiceProvider();
+        public  static DomainResolvingServiceProvider Shared { get; } = new DomainResolvingServiceProvider();
         private DomainResolvingServiceProvider() { }
 
-        public DomainResolvingService CreateDomainResolveingService()
+        public DomainResolvingService CreateDomainResolvingService()
         {
             return new DomainResolvingService();
         }

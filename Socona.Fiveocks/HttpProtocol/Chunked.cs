@@ -30,7 +30,7 @@ namespace Socona.Fiveocks.HTTP
                     totalbuff = new byte[65535];
                     finalbuff = new byte[size];
                     //remove chunk data before adding.
-                    oldbuffer = oldbuffer.ReplaceBetween(endofheader + 4, endofchunked + 2, new byte[] { });
+                    oldbuffer = oldbuffer.ReplaceBetween(endofheader + 4, endofchunked + 2, Array.Empty<byte>());
                     Buffer.BlockCopy(oldbuffer, 0, finalbuff, 0, size);
                     if (f.Connected)
                     {

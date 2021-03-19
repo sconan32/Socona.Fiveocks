@@ -8,5 +8,7 @@ namespace Socona.Fiveocks.SocksProtocol
 {
     public interface IOutboundEntry : INetEntry
     {
+
+        string DisplayName { get; }
     }
 }

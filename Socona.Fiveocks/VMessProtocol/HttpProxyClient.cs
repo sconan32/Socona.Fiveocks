@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.SocksProtocol;
 
 namespace Socona.Fiveocks.TCP
 {
@@ -58,31 +58,29 @@ namespace Socona.Fiveocks.TCP
                 // Do processing, continually receiving from the socket 
                 WebRequest hwr = WebRequest.CreateHttp(uri);
                 hwr.Proxy = new WebProxy(proxyUri);
-                using (WebResponse response = await hwr.GetResponseAsync())
+                using WebResponse response = await hwr.GetResponseAsync();
+                var stream = response.GetResponseStream();
+                while (true)
                 {
-                    var stream = response.GetResponseStream();
-                    while (true)
+
+                    var buffer = BufferManager.DefaultManager.CheckOut();
+                    try
                     {
+                        int bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length));
+                        if (bytesRead <= 0)
+                            break;
 
-                        var buffer = BufferManager.DefaultManager.CheckOut();
-                        try
-                        {
-                            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                            if (bytesRead <= 0)
-                                break;
-
-                            DataEventArgs data = new DataEventArgs(buffer, bytesRead);
-                            this.DataReceived(this, data);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                        }
-                        finally
-                        {
-                            BufferManager.DefaultManager.CheckIn(buffer);
-                            stream.Close();
-                        }
+                        DataEventArgs data = new DataEventArgs(buffer, bytesRead);
+                        this.DataReceived(this, data);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                    finally
+                    {
+                        BufferManager.DefaultManager.CheckIn(buffer);
+                        stream.Close();
                     }
                 }
 

@@ -1,4 +1,6 @@
-﻿using Socona.Fiveocks.SocksServer;
+﻿using Socona.Fiveocks.HttpProtocol;
+using Socona.Fiveocks.SocksProtocol;
+using Socona.Fiveocks.SocksServer;
 using System;
 using System.Buffers;
 using System.IO;
@@ -37,9 +39,9 @@ namespace Socona.Fiveocks.Cli
             await Task.Run(async () =>
             {
                 while (true)
-                {
-                    await Task.Delay(10000);
-                    TestServer("210.30.97.227", 10089, "www.baidu.com", 443);
+                {                    
+                    TestServer("127.0.0.1", 10084, "www.baidu.com", 443);
+                    await Task.Delay(60000);
                 }
             });
         }
@@ -50,20 +52,23 @@ namespace Socona.Fiveocks.Cli
             try
             {
 
-                Socks5Client.Socks5Client p = new Socks5Client.Socks5Client(socks5Server, sock5ServerPort, target, targetPort);
+                Socks5OutboundEntry p = new Socks5OutboundEntry(socks5Server, sock5ServerPort, target, targetPort);
                 // p.OnConnected += p_OnConnected;
                 if (await p.ConnectAsync())
                 {
-
                     using var memoryOwner = MemoryPool<byte>.Shared.Rent();
                     var memory = memoryOwner.Memory;
+                    var request = new BinaryHttpRequest().BuildGetRequest("www.baidu.com", 443);
+                    int length = request.TryGetBytes(memory);
+                    await p.SendAsync(memory.Slice(0,length));
+
+                    
                     var recv = await p.ReceiveAsync(memory);
                     if (recv <= 0)
                     {
                         Console.WriteLine("E ====        CHK NET        ====");
                         return;
                     }
-
                     using FileStream fileStream = File.OpenWrite($"T{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.txt");
 
                     fileStream.Write(memory.Slice(0, recv).Span);
@@ -76,7 +81,7 @@ namespace Socona.Fiveocks.Cli
                     fileStream.Close();
 
                     Console.WriteLine("i ====       TEST OK       ====");
-                    p.Disconnect();
+                    p.Dispose();
                 }
                 else
                 {

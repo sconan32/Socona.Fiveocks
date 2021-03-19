@@ -1,12 +1,13 @@
 ﻿using Socona.Fiveocks.Plugin;
 using Socona.Fiveocks.TCP;
 using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Socona.Fiveocks.SocksProtocol;
+using Socona.Fiveocks.Services;
+using System.Diagnostics;
 
 namespace Socona.Fiveocks.SocksServer
 {
@@ -14,16 +15,12 @@ namespace Socona.Fiveocks.SocksServer
     {
         private TcpListener _tcpListener;
 
-        private List<IForwardingTunnel> _clients = new List<IForwardingTunnel>();
+        private CancellationTokenSource _cancellation = new CancellationTokenSource();
 
-        private CancellationTokenSource cancellation = new CancellationTokenSource();
+        public Stats Stats { get; private set; }
 
-        public CancellationToken CancellationToken => cancellation.Token;
+        private bool _started;
 
-        public Stats Stats;
-
-        private bool started;
-        
         public int Timeout { get; set; }
 
         public int PacketSize { get; set; }
@@ -41,24 +38,23 @@ namespace Socona.Fiveocks.SocksServer
 
         public void Start()
         {
-            if (this.started)
+            if (this._started)
             {
                 return;
             }
             PluginLoader.LoadPluginsFromDisk = this.LoadPluginsFromDisk;
             PluginLoader.LoadPlugins();
-            this.started = true;
+            this._started = true;
             HandleTcpSocketLoop();
         }
 
         public void Stop()
         {
-            if (!this.started)
+            if (!this._started)
             {
                 return;
             }
-            this.started = false;
-            this._clients.Clear();
+            this._started = false;
         }
 
         private async void HandleTcpSocketLoop()
@@ -67,7 +63,7 @@ namespace Socona.Fiveocks.SocksServer
             try
             {
                 this._tcpListener.Start();
-                while (!CancellationToken.IsCancellationRequested)
+                while (!_cancellation.Token.IsCancellationRequested)
                 {
                     Socket socket = await _tcpListener.AcceptSocketAsync();
                     var task = OnClientConnected(socket);
@@ -82,32 +78,46 @@ namespace Socona.Fiveocks.SocksServer
 
         }
         private async Task OnClientConnected(Socket socket)
-        {
-            IForwardingTunnel forwardingTunnel = null;
+        {          
             try
             {
-                using SocksProtocol.SocksInboundEntry socksInboundEntry = new SocksProtocol.SocksInboundEntry(socket);
-                forwardingTunnel = await socksInboundEntry.CreateForwardingTunnelAsync( CancellationToken);
-                if(forwardingTunnel==null)
-                {
-                    return;
-                }
+                using SocksInboundEntry socksInboundEntry = new SocksInboundEntry(socket);
+                var request = await socksInboundEntry.RetrieveSocksRequestAsync(_cancellation.Token);
+
+                using var outboundEntry = await OutboundEntryServiceProvider.Shared.CreateService().CreateOutBoundEntryAsync(request) ?? new DirectOutboundEntry(request);
+
+                var domainResolvingService = DomainResolvingServiceProvider.Shared.CreateDomainResolvingService() ?? new DomainResolvingService();
+
+                await request.ResolveDomainAsync(domainResolvingService);
+
+                var tunnelDesc = $"<{outboundEntry.DisplayName}> {request}";
+
+                Debug.WriteLine($"+ {tunnelDesc}");
+                Console.WriteLine($"+ {tunnelDesc}");
+               
+                using IForwardingTunnel forwardingTunnel = new ForwardingTunnel(request);
                 forwardingTunnel.InCounter = Stats.DownCounter;
                 forwardingTunnel.OutCounter = Stats.UpCounter;
-                _clients.Add(forwardingTunnel);
+                forwardingTunnel.InboundEntry = socksInboundEntry;
+                forwardingTunnel.OutboundEntry = outboundEntry;
+
                 this.Stats.AddClient();
-                await forwardingTunnel.ForwardAsync(CancellationToken);
+
+                await forwardingTunnel.ForwardAsync(_cancellation.Token);
+
+                Debug.WriteLine($"- {tunnelDesc}");
+                Console.WriteLine($"- {tunnelDesc}");
+                forwardingTunnel.Dispose();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
             finally
             {
-                _clients.Remove(forwardingTunnel);
                 this.Stats.DecreaseClient();
             }
-         
-        }     
+
+        }
     }
 }

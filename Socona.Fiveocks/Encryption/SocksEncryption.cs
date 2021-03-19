@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography;
 using System.Text;
-using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.SocksProtocol;
 
 namespace Socona.Fiveocks.Encryption
 {

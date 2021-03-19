@@ -5,6 +5,7 @@
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>favicon (1).ico</ApplicationIcon>
+    <AssemblyName>FiveocksGui</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Socona.Fiveocks.Cli\Socona.Fiveocks.Cli.csproj" />
     <ProjectReference Include="..\Socona.Fiveocks\Socona.Fiveocks.csproj" />
   </ItemGroup>
 

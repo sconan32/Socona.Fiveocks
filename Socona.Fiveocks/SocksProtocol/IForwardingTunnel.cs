@@ -1,4 +1,5 @@
-﻿using Socona.ToolBox.Tools;
+﻿using Socona.Fiveocks.SocksProtocol;
+using Socona.ToolBox.Tools;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Socona.Fiveocks.SocksProtocol
 {
-    public interface IForwardingTunnel
+    public interface IForwardingTunnel : IDisposable
     {
         Task<long> ForwardAsync(CancellationToken cancellationToken = default);
 
@@ -17,7 +18,13 @@ namespace Socona.Fiveocks.SocksProtocol
 
         BandwidthCounter OutCounter { get; set; }
 
+        IInboundEntry InboundEntry { get; set; }
+
+        IOutboundEntry OutboundEntry { get; set; }
+
         bool IsCompleted { get; set; }
+
+        SocksRequest Request { get; set; }
 
     }
 }

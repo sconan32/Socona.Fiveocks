@@ -6,7 +6,7 @@ using Socona.Fiveocks.Encryption;
 using Socona.Fiveocks.Plugin;
 using Socona.Fiveocks.TCP;
 
-namespace Socona.Fiveocks.Socks
+namespace Socona.Fiveocks.SocksProtocol
 {
 //    class SocksSpecialTunnel : IDisposable
 //    {

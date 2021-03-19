@@ -1,10 +1,6 @@
-﻿using Socona.Fiveocks.Socks;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,6 +11,9 @@ namespace Socona.Fiveocks.SocksProtocol
         public SocksRequest Request { get; set; }
 
         public Socket Socket { get; private set; }
+
+
+        public string DisplayName { get; } = "DIRECT";
 
         public DirectOutboundEntry(SocksRequest request)
         {

@@ -1,9 +1,10 @@
 ﻿using Socona.Fiveocks.Encryption;
 using Socona.Fiveocks.Services;
-using Socona.Fiveocks.Socks;
+using Socona.Fiveocks.SocksProtocol;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,14 +20,12 @@ namespace Socona.Fiveocks.SocksProtocol
     {
         Socket Socket { get; set; }
 
-        SocksRequest Request { get; set; }
-
         public SocksInboundEntry(Socket socket)
         {
             Socket = socket;
         }
 
-        public async Task<IForwardingTunnel> CreateForwardingTunnelAsync(CancellationToken cancellationToken = default)
+        public async Task<SocksRequest> RetrieveSocksRequestAsync(CancellationToken cancellationToken = default)
         {
             var authTypes = await ReceiveAuthTypesAsync(cancellationToken);
             if (!await AuthenticateClientAsync(authTypes, cancellationToken))
@@ -35,12 +34,8 @@ namespace Socona.Fiveocks.SocksProtocol
             }
 
             var socksRequest = await ReceiveSocksRequestAsync(cancellationToken);
-            if (socksRequest == null)
-            {
-                return null;
-            }
 
-            return new DirectForwardingTunnel(socksRequest, this);
+            return socksRequest;          
         }
 
         public async Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
@@ -77,7 +72,7 @@ namespace Socona.Fiveocks.SocksProtocol
             // CMD: 0x01 = CONNECT 0x02 = BIND 0x03 = UDP forwarding
             // ATYP: 0x01 = IPV4 0x03 = Domain 0x04 = IPV6
 
-            if (recv <= 0 || (HeaderTypes)memory.Span[0] != HeaderTypes.Socks5)
+            if (recv <= 0 || (SocksVersionTypes)memory.Span[0] != SocksVersionTypes.Socks5)
                 return null;
 
             if ((StreamTypes)memory.Span[1] != StreamTypes.Stream)
@@ -109,6 +104,17 @@ namespace Socona.Fiveocks.SocksProtocol
                 int domainlen = memory.Span[4];
                 domain = Encoding.ASCII.GetString(memory.Slice(5, domainlen).Span);
                 fwd += domainlen + 1;
+                if(IPAddress.TryParse(domain, out ipAddress))
+                {
+                    addressType = ipAddress.AddressFamily switch
+                    {
+                        AddressFamily.InterNetwork=> AddressType.IP,
+                        AddressFamily.InterNetworkV6 => AddressType.IPv6,                      
+                        _ => 0x00,
+                    };
+
+                }
+
             }
             else
             {
@@ -116,7 +122,9 @@ namespace Socona.Fiveocks.SocksProtocol
             }
 
             short portOriginal = BitConverter.ToInt16(memory.Slice(fwd, 2).Span);
-            int port = IPAddress.NetworkToHostOrder(portOriginal);
+            int port = (ushort)IPAddress.NetworkToHostOrder(portOriginal);
+
+
 
             return new SocksRequest(StreamTypes.Stream, addressType, ipAddress, domain, port);
         }
@@ -135,7 +143,7 @@ namespace Socona.Fiveocks.SocksProtocol
             //+------+--------+
             using var memoryOwner = MemoryPool<byte>.Shared.Rent(2);
             var memory = memoryOwner.Memory;
-            memory.Span[0] = (byte)HeaderTypes.Socks5;
+            memory.Span[0] = (byte)SocksVersionTypes.Socks5;
             memory.Span[1] = (byte)authType;
             await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, cancellationToken);
         }
@@ -155,8 +163,8 @@ namespace Socona.Fiveocks.SocksProtocol
             // +----+----------+----------+
             // | 1B |    1B    | 1 to 255 |
             // +----+----------+----------+
-            HeaderTypes headerType = (HeaderTypes)memory.Span[0];
-            if (headerType == HeaderTypes.Socks5)
+            SocksVersionTypes headerType = (SocksVersionTypes)memory.Span[0];
+            if (headerType == SocksVersionTypes.Socks5)
             {
                 int methods = memory.Span[1];
                 List<AuthTypes> types = new List<AuthTypes>(5);

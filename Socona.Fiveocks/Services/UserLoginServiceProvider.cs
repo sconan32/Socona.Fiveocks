@@ -7,17 +7,17 @@ using System.Threading.Tasks;
 
 namespace Socona.Fiveocks.Services
 {
-    public  class UserLoginServiceProvider
+    public class UserLoginServiceProvider
     {
-        public readonly static UserLoginServiceProvider Shared = new UserLoginServiceProvider();
+        public static UserLoginServiceProvider Shared { get; } = new UserLoginServiceProvider();
         private UserLoginServiceProvider() { }
 
-        public  LoginHandler CreateHandler()
+        public LoginHandler CreateHandler()
         {
             return new LoginHandlerExample();
         }
 
-        public  bool IsUserLoginEnabled
+        public bool IsUserLoginEnabled
         {
             get
             {
