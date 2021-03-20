@@ -1,4 +1,5 @@
-﻿using Socona.Fiveocks.Encryption;
+﻿using Socona.Fiveocks.Core;
+using Socona.Fiveocks.Encryption;
 using Socona.Fiveocks.Services;
 using Socona.Fiveocks.SocksProtocol;
 using System;
@@ -32,11 +33,36 @@ namespace Socona.Fiveocks.SocksProtocol
             {
                 return null;
             }
-
             var socksRequest = await ReceiveSocksRequestAsync(cancellationToken);
-
-            return socksRequest;          
+            socksRequest.InboundEndPoint = Socket.RemoteEndPoint;
+            return socksRequest;
         }
+
+        public async Task<bool> ShakeHandAsync(SocksRequest request, IOutboundEntry outboundEntry, CancellationToken cancellationToken = default)
+        {
+            using var memoryOwner = MemoryPool<byte>.Shared.Rent();
+            var memory = memoryOwner.Memory;
+            try
+            {
+                if (!await outboundEntry.ConnectAsync(cancellationToken))
+                {
+                    request.Error = SockStatus.HostUnreachable;
+                }
+
+                var requestLength = request.MakeResponsePackage(memory);
+                await SendAsync(memory.Slice(0, requestLength), cancellationToken);
+
+                if (request.Error == SockStatus.Granted)
+                {
+                    return true;
+                }
+            }
+            catch (SocketException)
+            { }
+
+            return false;
+        }
+
 
         public async Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
@@ -72,7 +98,7 @@ namespace Socona.Fiveocks.SocksProtocol
             // CMD: 0x01 = CONNECT 0x02 = BIND 0x03 = UDP forwarding
             // ATYP: 0x01 = IPV4 0x03 = Domain 0x04 = IPV6
 
-            if (recv <= 0 || (SocksVersionTypes)memory.Span[0] != SocksVersionTypes.Socks5)
+            if (recv <= 0 || (SocksVersions)memory.Span[0] != SocksVersions.Socks5)
                 return null;
 
             if ((StreamTypes)memory.Span[1] != StreamTypes.Stream)
@@ -86,35 +112,34 @@ namespace Socona.Fiveocks.SocksProtocol
             string domain = null;
             int fwd = 4;
 
-            var addressType = (AddressType)memory.Span[3];
-            if (addressType == AddressType.IP)
+            var addressType = (SocksAddressType)memory.Span[3];
+            if (addressType == SocksAddressType.IP)
             {
                 ipAddress = new IPAddress(memory.Slice(4, 4).Span);
                 domain = ipAddress.ToString();
                 fwd += 4;
             }
-            else if (addressType == AddressType.IPv6)
+            else if (addressType == SocksAddressType.IPv6)
             {
                 ipAddress = new IPAddress(memory.Slice(4, 16).Span);
                 domain = ipAddress.ToString();
                 fwd += 16;
             }
-            else if (addressType == AddressType.Domain)
+            else if (addressType == SocksAddressType.Domain)
             {
                 int domainlen = memory.Span[4];
                 domain = Encoding.ASCII.GetString(memory.Slice(5, domainlen).Span);
                 fwd += domainlen + 1;
-                if(IPAddress.TryParse(domain, out ipAddress))
+                if (IPAddress.TryParse(domain, out ipAddress))
                 {
                     addressType = ipAddress.AddressFamily switch
                     {
-                        AddressFamily.InterNetwork=> AddressType.IP,
-                        AddressFamily.InterNetworkV6 => AddressType.IPv6,                      
+                        AddressFamily.InterNetwork => SocksAddressType.IP,
+                        AddressFamily.InterNetworkV6 => SocksAddressType.IPv6,
                         _ => 0x00,
                     };
 
                 }
-
             }
             else
             {
@@ -124,8 +149,6 @@ namespace Socona.Fiveocks.SocksProtocol
             short portOriginal = BitConverter.ToInt16(memory.Slice(fwd, 2).Span);
             int port = (ushort)IPAddress.NetworkToHostOrder(portOriginal);
 
-
-
             return new SocksRequest(StreamTypes.Stream, addressType, ipAddress, domain, port);
         }
 
@@ -134,7 +157,7 @@ namespace Socona.Fiveocks.SocksProtocol
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task SendAuthTypeAsync(AuthTypes authType, CancellationToken cancellationToken = default)
+        public async Task SendAuthTypeAsync(AuthencationMethods authType, CancellationToken cancellationToken = default)
         {
             //+------+--------+
             //| VER  | METHOD |
@@ -143,7 +166,7 @@ namespace Socona.Fiveocks.SocksProtocol
             //+------+--------+
             using var memoryOwner = MemoryPool<byte>.Shared.Rent(2);
             var memory = memoryOwner.Memory;
-            memory.Span[0] = (byte)SocksVersionTypes.Socks5;
+            memory.Span[0] = (byte)SocksVersions.Socks5;
             memory.Span[1] = (byte)authType;
             await Socket.SendAsync(memory.Slice(0, 2), SocketFlags.None, cancellationToken);
         }
@@ -153,7 +176,7 @@ namespace Socona.Fiveocks.SocksProtocol
         /// </summary>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<List<AuthTypes>> ReceiveAuthTypesAsync(CancellationToken cancellationToken = default)
+        public async Task<List<AuthencationMethods>> ReceiveAuthTypesAsync(CancellationToken cancellationToken = default)
         {
             using var memoryOwner = MemoryPool<byte>.Shared.Rent();
             var memory = memoryOwner.Memory;
@@ -163,29 +186,29 @@ namespace Socona.Fiveocks.SocksProtocol
             // +----+----------+----------+
             // | 1B |    1B    | 1 to 255 |
             // +----+----------+----------+
-            SocksVersionTypes headerType = (SocksVersionTypes)memory.Span[0];
-            if (headerType == SocksVersionTypes.Socks5)
+            SocksVersions headerType = (SocksVersions)memory.Span[0];
+            if (headerType == SocksVersions.Socks5)
             {
                 int methods = memory.Span[1];
-                List<AuthTypes> types = new List<AuthTypes>(5);
+                List<AuthencationMethods> types = new List<AuthencationMethods>(5);
                 for (int i = 2; i < methods + 2; i++)
                 {
-                    switch ((AuthTypes)memory.Span[i])
+                    switch ((AuthencationMethods)memory.Span[i])
                     {
-                        case AuthTypes.Login:
-                            types.Add(AuthTypes.Login);
+                        case AuthencationMethods.Login:
+                            types.Add(AuthencationMethods.Login);
                             break;
-                        case AuthTypes.None:
-                            types.Add(AuthTypes.None);
+                        case AuthencationMethods.None:
+                            types.Add(AuthencationMethods.None);
                             break;
-                        case AuthTypes.SocksBoth:
-                            types.Add(AuthTypes.SocksBoth);
+                        case AuthencationMethods.SocksBoth:
+                            types.Add(AuthencationMethods.SocksBoth);
                             break;
-                        case AuthTypes.SocksEncrypt:
-                            types.Add(AuthTypes.SocksEncrypt);
+                        case AuthencationMethods.SocksEncrypt:
+                            types.Add(AuthencationMethods.SocksEncrypt);
                             break;
-                        case AuthTypes.SocksCompress:
-                            types.Add(AuthTypes.SocksCompress);
+                        case AuthencationMethods.SocksCompress:
+                            types.Add(AuthencationMethods.SocksCompress);
                             break;
                     }
                 }
@@ -200,31 +223,31 @@ namespace Socona.Fiveocks.SocksProtocol
         /// <param name="authTypes"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        public async Task<bool> AuthenticateClientAsync(List<AuthTypes> authTypes, CancellationToken cancellationToken = default)
+        public async Task<bool> AuthenticateClientAsync(List<AuthencationMethods> authTypes, CancellationToken cancellationToken = default)
         {
 
             if (authTypes == null || authTypes.Count == 0)
             {
-                await SendAuthTypeAsync(AuthTypes.Unsupported, cancellationToken);
+                await SendAuthTypeAsync(AuthencationMethods.Unsupported, cancellationToken);
                 Console.WriteLine("FATAL: No Acceptable AuthType. [AuthTypes.None] needed");
                 return false;
             }
 
             var isServerSideLoginEnabled = UserLoginServiceProvider.Shared.IsUserLoginEnabled;
 
-            if (isServerSideLoginEnabled && authTypes.Contains(AuthTypes.Login))
+            if (isServerSideLoginEnabled && authTypes.Contains(AuthencationMethods.Login))
             {
-                await SendAuthTypeAsync(AuthTypes.Login, cancellationToken);
+                await SendAuthTypeAsync(AuthencationMethods.Login, cancellationToken);
                 return await CheckUsernamePasswordAsync(cancellationToken);
             }
-            else if (authTypes.Contains(AuthTypes.None))
+            else if (authTypes.Contains(AuthencationMethods.None))
             {
-                await SendAuthTypeAsync(AuthTypes.None, cancellationToken);
+                await SendAuthTypeAsync(AuthencationMethods.None, cancellationToken);
                 return true;
             }
             else
             {
-                await SendAuthTypeAsync(AuthTypes.Unsupported, cancellationToken);
+                await SendAuthTypeAsync(AuthencationMethods.Unsupported, cancellationToken);
                 return false;
             }
         }

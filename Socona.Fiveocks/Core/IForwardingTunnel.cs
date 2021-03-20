@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Socona.Fiveocks.SocksProtocol
+namespace Socona.Fiveocks.Core
 {
     public interface IForwardingTunnel : IDisposable
     {
@@ -22,9 +22,7 @@ namespace Socona.Fiveocks.SocksProtocol
 
         IOutboundEntry OutboundEntry { get; set; }
 
-        bool IsCompleted { get; set; }
-
-        SocksRequest Request { get; set; }
+        bool IsCompleted { get; set; }       
 
     }
 }

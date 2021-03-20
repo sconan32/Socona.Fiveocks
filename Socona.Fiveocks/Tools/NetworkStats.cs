@@ -1,16 +1,16 @@
 ﻿using Socona.ToolBox.Tools;
 using System.Threading;
 
-namespace Socona.Fiveocks.TCP
+namespace Socona.Fiveocks.Tools
 {
-    public class Stats
+    public class NetworkStats
     {
-        readonly BandwidthCounter sc;
-        readonly BandwidthCounter rc;
-        public Stats()
+        readonly BandwidthCounter upCounter;
+        readonly BandwidthCounter downCounter;
+        public NetworkStats()
         {
-            sc = new BandwidthCounter();
-            rc = new BandwidthCounter();
+            upCounter = new BandwidthCounter();
+            downCounter = new BandwidthCounter();
         }
         public void AddClient()
         {
@@ -71,15 +71,15 @@ namespace Socona.Fiveocks.TCP
         {
             get { return UpCounter.GetPerSecondString(); }
         }
-        public string TotoalSent
+        public string TotalSent
         { get { return UpCounter.ToString(); } }
 
         public string TotalReceived
         { get { return DownCounter.ToString(); } }
 
-        public BandwidthCounter UpCounter => sc;
+        public BandwidthCounter UpCounter => upCounter;
 
-        public BandwidthCounter DownCounter => rc;
+        public BandwidthCounter DownCounter => downCounter;
     }
     public enum PacketType
     {

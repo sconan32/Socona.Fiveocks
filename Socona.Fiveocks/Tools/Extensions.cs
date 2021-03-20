@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Socona.Fiveocks
+namespace Socona.Fiveocks.Tools
 {
     [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class
                     | AttributeTargets.Method)]

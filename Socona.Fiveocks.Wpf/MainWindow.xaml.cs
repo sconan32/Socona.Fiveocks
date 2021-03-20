@@ -103,7 +103,7 @@ namespace Socona.Fiveocks
 
                             txtSumRecv.Text = x.Stats.TotalReceived;
 
-                            txtSumSend.Text = x.Stats.TotoalSent;
+                            txtSumSend.Text = x.Stats.TotalSent;
                             txtClients.Text = x.Stats.TotalClients.ToString();
                             TimeSpan ts = new TimeSpan(0, 0, (int)(timetickcnt / 2));
                             txtOnTime.Text = ts.ToString();

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Socona.Fiveocks
+namespace Socona.Fiveocks.Tools
 {
     class Utils
     {

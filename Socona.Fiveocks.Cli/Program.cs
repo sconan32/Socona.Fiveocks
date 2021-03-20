@@ -1,6 +1,7 @@
 ﻿using Socona.Fiveocks.HttpProtocol;
 using Socona.Fiveocks.SocksProtocol;
-using Socona.Fiveocks.SocksServer;
+using Socona.Fiveocks.TCP;
+using Socona.Fiveocks.Tools;
 using System;
 using System.Buffers;
 using System.IO;
@@ -14,7 +15,8 @@ namespace Socona.Fiveocks.Cli
     {
         static async Task Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("Socona Fiveocks Server");
+            Console.WriteLine("Ver. 1.0");
 
             var port = 10084;
             IPAddress[] localIps = Dns.GetHostAddresses(Dns.GetHostName());
@@ -24,8 +26,8 @@ namespace Socona.Fiveocks.Cli
                 ipBuilder.Append(ip.ToString());
                 ipBuilder.Append("; ");
             }
-            Console.WriteLine(ipBuilder.ToString());
-            Console.WriteLine(port.ToString());
+            Console.WriteLine($"Listen Address: {ipBuilder}");
+            Console.WriteLine($"Listen Port: {port}");
 
 
             Console.WriteLine("Starting Server...");
@@ -39,13 +41,20 @@ namespace Socona.Fiveocks.Cli
             await Task.Run(async () =>
             {
                 while (true)
-                {                    
-                    TestServer("127.0.0.1", 10084, "www.baidu.com", 443);
+                {
+                    ShowStats(x.Stats);
+                    // TestServer("127.0.0.1", 10084, "www.baidu.com", 443);
                     await Task.Delay(60000);
                 }
             });
         }
 
+
+        public static async void ShowStats(NetworkStats stats)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"I @{DateTime.Now:G}  #Clients: {stats.TotalClients}  #OutBytes: {stats.TotalSent}  #InBytes: {stats.TotalReceived}");
+        }
 
         public static async void TestServer(string socks5Server, int sock5ServerPort, string target, int targetPort)
         {
@@ -60,9 +69,9 @@ namespace Socona.Fiveocks.Cli
                     var memory = memoryOwner.Memory;
                     var request = new BinaryHttpRequest().BuildGetRequest("www.baidu.com", 443);
                     int length = request.TryGetBytes(memory);
-                    await p.SendAsync(memory.Slice(0,length));
+                    await p.SendAsync(memory.Slice(0, length));
 
-                    
+
                     var recv = await p.ReceiveAsync(memory);
                     if (recv <= 0)
                     {

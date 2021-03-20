@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Socona.Fiveocks.Services
 {
-    public class OutboundEntryServiceProvider
+    public class RoutingServiceProvider
     {
-        public static OutboundEntryServiceProvider Shared { get; } = new OutboundEntryServiceProvider();
+        public static RoutingServiceProvider Shared { get; } = new RoutingServiceProvider();
 
         private OutboundEntryService _fts { get; } = new OutboundEntryService();
-        private OutboundEntryServiceProvider() { }
+        private RoutingServiceProvider() { }
 
         public OutboundEntryService CreateService()
         {

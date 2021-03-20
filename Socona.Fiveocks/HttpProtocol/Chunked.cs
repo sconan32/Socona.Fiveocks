@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Socona.Fiveocks.Tools;
+using System;
 using System.Net.Sockets;
 
 namespace Socona.Fiveocks.HTTP

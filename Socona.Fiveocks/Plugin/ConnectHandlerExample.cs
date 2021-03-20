@@ -11,7 +11,7 @@ namespace Socona.Fiveocks.Plugin
             {
                 Console.WriteLine("Redirecting traffic from {0} to yahoo.com.", Request.Address);
                 Request.Address = "www.yahoo.com";
-                Request.Type = SocksProtocol.AddressType.Domain;
+                Request.AddressType = SocksProtocol.SocksAddressType.Domain;
             }
             //Allow the connection.
             return true;

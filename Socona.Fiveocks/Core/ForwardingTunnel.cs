@@ -7,13 +7,12 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Socona.Fiveocks.SocksProtocol
+namespace Socona.Fiveocks.Core
 {
 
     public class ForwardingTunnel : IForwardingTunnel
-      
     {
-        public SocksRequest Request { get; set; }
+
 
         public IInboundEntry InboundEntry { get; set; }
 
@@ -25,29 +24,17 @@ namespace Socona.Fiveocks.SocksProtocol
 
         public bool IsCompleted { get; set; } = false;
 
-        public ForwardingTunnel(SocksRequest request)
+        public ForwardingTunnel()
         {
-            Request = request;
+          
         }
 
         public virtual async Task<long> ForwardAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                if (!await OutboundEntry.ConnectAsync(cancellationToken))
-                {
-                    Request.Error = SockStatus.HostUnreachable;
-                }
                 using var localMemoryOwner = MemoryPool<byte>.Shared.Rent();
                 var localMemory = localMemoryOwner.Memory;
-
-                var requestLength = Request.MakeResponsePackage(localMemory);
-                await InboundEntry.SendAsync(localMemory.Slice(0, requestLength), cancellationToken);
-
-                if (Request.Error != SockStatus.Granted)
-                {
-                    return 0;
-                }
 
                 using var remoteMemoryOwner = MemoryPool<byte>.Shared.Rent();
                 var remoteMemory = remoteMemoryOwner.Memory;

@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Socona.Fiveocks.Core;
 using Socona.Fiveocks.Plugin;
 using Socona.Fiveocks.SocksProtocol;
 using Socona.Fiveocks.TCP;
@@ -57,7 +58,7 @@ namespace Socona.Fiveocks.Plugin
 
         }
 
-        public bool ShallUseProxy(SocksRequest request)
+        public bool ShallUseProxy(IRequest request)
         {
             var addr = $"{request.Address}$";
             if (patterns == null)

@@ -12,7 +12,7 @@ namespace Socona.Fiveocks.Services
         public  static DomainResolvingServiceProvider Shared { get; } = new DomainResolvingServiceProvider();
         private DomainResolvingServiceProvider() { }
 
-        public DomainResolvingService CreateDomainResolvingService()
+        public DomainResolvingService CreateService()
         {
             return new DomainResolvingService();
         }

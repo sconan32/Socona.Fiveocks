@@ -11,7 +11,7 @@ namespace Socona.Fiveocks.TCP
 {
     class HttpProxyClient
     {
-        public event EventHandler<DisconnectEventArgs> Disconnecting;
+     //   public event EventHandler<DisconnectEventArgs> Disconnecting;
 
         public event EventHandler<DataEventArgs> DataReceived = delegate { };
         public event EventHandler<DataEventArgs> DataSent = delegate { };
@@ -101,7 +101,7 @@ namespace Socona.Fiveocks.TCP
         {
             if (!this.disposed)
             {
-                Disconnecting(this, null);
+              //  Disconnecting(this, null);
                 this.Dispose();
             }
         }
@@ -144,7 +144,7 @@ namespace Socona.Fiveocks.TCP
                 // Sock = null;
                 //  BufferManager.DefaultManager.CheckIn(buffer);
                 //  buffer = null;
-                Disconnecting = null;
+              //  Disconnecting = null;
                 DataReceived = null;
                 DataSent = null;
             }

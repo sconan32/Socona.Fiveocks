@@ -1,21 +1,22 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Socona.Fiveocks.SocksProtocol
+namespace Socona.Fiveocks.Core
 {
     public class DirectOutboundEntry : IOutboundEntry
     {
-        public SocksRequest Request { get; set; }
+        public IRequest Request { get; set; }
 
         public Socket Socket { get; private set; }
 
 
         public string DisplayName { get; } = "DIRECT";
 
-        public DirectOutboundEntry(SocksRequest request)
+        public DirectOutboundEntry(IRequest request)
         {
             Request = request;
             Socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
@@ -36,7 +37,7 @@ namespace Socona.Fiveocks.SocksProtocol
                 }
                 catch (SocketException ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    Debug.WriteLine(ex.Message);
                 }
             }
             return false;

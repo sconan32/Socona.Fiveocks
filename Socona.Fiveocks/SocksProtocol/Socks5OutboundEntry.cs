@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Socona.Fiveocks.Core;
+using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.Net;
@@ -38,7 +39,7 @@ namespace Socona.Fiveocks.SocksProtocol
             ProxyAddress = proxyAddress;
             ProxyPort = proxyPort;
 
-            Request = new SocksRequest(StreamTypes.Stream, AddressType.Domain, null, destDomain, destPort);          
+            Request = new SocksRequest(StreamTypes.Stream, SocksAddressType.Domain, null, destDomain, destPort);          
             Socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
         }
 
@@ -91,10 +92,10 @@ namespace Socona.Fiveocks.SocksProtocol
             //| 1Byte |   1Byte  | 1 to 255 |
             //+-------+----------+----------+
             //Ver Socks4=0x01 Sock5=0x05
-            memory.Span[0] = (byte)SocksVersionTypes.Socks5;
+            memory.Span[0] = (byte)SocksVersions.Socks5;
             memory.Span[1] = 0x02;
-            memory.Span[2] = (byte)AuthTypes.None;
-            memory.Span[3] = (byte)AuthTypes.Login;
+            memory.Span[2] = (byte)AuthencationMethods.None;
+            memory.Span[3] = (byte)AuthencationMethods.Login;
             await Socket.SendAsync(memory.Slice(0, 4), SocketFlags.None, cancellationToken);
 
             //+-------+----------+
@@ -113,16 +114,16 @@ namespace Socona.Fiveocks.SocksProtocol
             //check for server version.
             if (memory.Span[0] == 0x05)
             {
-                switch ((AuthTypes)memory.Span[1])
+                switch ((AuthencationMethods)memory.Span[1])
                 {
-                    case AuthTypes.None:
+                    case AuthencationMethods.None:
                         isAuthenized = true;
                         break;
-                    case AuthTypes.Login:
+                    case AuthencationMethods.Login:
                         isAuthenized = await AuthenrizeUserAsync(cancellationToken);
                         break;
                     default:
-                        Console.WriteLine($"Server needs an unrecognized AuthType {(AuthTypes)memory.Span[1]} ");
+                        Console.WriteLine($"Server needs an unrecognized AuthType {(AuthencationMethods)memory.Span[1]} ");
                         break;
                 }
             }
@@ -132,7 +133,7 @@ namespace Socona.Fiveocks.SocksProtocol
                 await Socket.SendAsync(memory.Slice(0, length), SocketFlags.None, cancellationToken);
                 received = await Socket.ReceiveAsync(memory, SocketFlags.None, cancellationToken);
                 if (received > 0 &&
-                    memory.Span[0] == (byte)SocksVersionTypes.Socks5 &&
+                    memory.Span[0] == (byte)SocksVersions.Socks5 &&
                     memory.Span[1] == (byte)SockStatus.Granted)
                 {
                     return true;

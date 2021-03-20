@@ -5,11 +5,12 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Socona.Fiveocks.SocksProtocol;
 using Socona.Fiveocks.Services;
 using System.Diagnostics;
+using Socona.Fiveocks.Core;
+using Socona.Fiveocks.Tools;
 
-namespace Socona.Fiveocks.SocksServer
+namespace Socona.Fiveocks.SocksProtocol
 {
     public class Socks5Server
     {
@@ -17,7 +18,7 @@ namespace Socona.Fiveocks.SocksServer
 
         private CancellationTokenSource _cancellation = new CancellationTokenSource();
 
-        public Stats Stats { get; private set; }
+        public NetworkStats Stats { get; private set; }
 
         private bool _started;
 
@@ -32,7 +33,7 @@ namespace Socona.Fiveocks.SocksServer
             this.Timeout = 5000;
             this.PacketSize = 65535;
             this.LoadPluginsFromDisk = false;
-            this.Stats = new Stats();
+            this.Stats = new NetworkStats();
             this._tcpListener = TcpListener.Create(port);
         }
 
@@ -78,36 +79,38 @@ namespace Socona.Fiveocks.SocksServer
 
         }
         private async Task OnClientConnected(Socket socket)
-        {          
+        {
+            string tunnelDesc = string.Empty;
             try
             {
+                this.Stats.AddClient();
                 using SocksInboundEntry socksInboundEntry = new SocksInboundEntry(socket);
                 var request = await socksInboundEntry.RetrieveSocksRequestAsync(_cancellation.Token);
+           
+                using var outboundEntry = await RoutingServiceProvider.Shared.CreateService().CreateOutBoundEntryAsync(request) ?? new DirectOutboundEntry(request);             
 
-                using var outboundEntry = await OutboundEntryServiceProvider.Shared.CreateService().CreateOutBoundEntryAsync(request) ?? new DirectOutboundEntry(request);
-
-                var domainResolvingService = DomainResolvingServiceProvider.Shared.CreateDomainResolvingService() ?? new DomainResolvingService();
-
+                var domainResolvingService = DomainResolvingServiceProvider.Shared.CreateService() ?? new DomainResolvingService();            
                 await request.ResolveDomainAsync(domainResolvingService);
 
-                var tunnelDesc = $"<{outboundEntry.DisplayName}> {request}";
+                tunnelDesc = $"{request} <{outboundEntry.DisplayName}> ";
 
                 Debug.WriteLine($"+ {tunnelDesc}");
-                Console.WriteLine($"+ {tunnelDesc}");
-               
-                using IForwardingTunnel forwardingTunnel = new ForwardingTunnel(request);
-                forwardingTunnel.InCounter = Stats.DownCounter;
-                forwardingTunnel.OutCounter = Stats.UpCounter;
-                forwardingTunnel.InboundEntry = socksInboundEntry;
-                forwardingTunnel.OutboundEntry = outboundEntry;
+                Console.WriteLine($"+ {tunnelDesc}");               
 
-                this.Stats.AddClient();
-
-                await forwardingTunnel.ForwardAsync(_cancellation.Token);
+                if (await socksInboundEntry.ShakeHandAsync(request, outboundEntry, _cancellation.Token))
+                {
+                    using IForwardingTunnel forwardingTunnel = new ForwardingTunnel();
+                    forwardingTunnel.InCounter = Stats.DownCounter;
+                    forwardingTunnel.OutCounter = Stats.UpCounter;
+                    forwardingTunnel.InboundEntry = socksInboundEntry;
+                    forwardingTunnel.OutboundEntry = outboundEntry;
+                    
+                    await forwardingTunnel.ForwardAsync(_cancellation.Token);                  
+                    forwardingTunnel.Dispose();                   
+                }
 
                 Debug.WriteLine($"- {tunnelDesc}");
                 Console.WriteLine($"- {tunnelDesc}");
-                forwardingTunnel.Dispose();
             }
             catch (Exception ex)
             {
@@ -116,6 +119,7 @@ namespace Socona.Fiveocks.SocksServer
             finally
             {
                 this.Stats.DecreaseClient();
+              
             }
 
         }
