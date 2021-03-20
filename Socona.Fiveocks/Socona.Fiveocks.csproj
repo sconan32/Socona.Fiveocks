@@ -8,8 +8,4 @@
     <ProjectReference Include="..\..\Socona.Toolbox\Socona.Toolbox\Socona.ToolBox.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="SocksServer\" />
-  </ItemGroup>
-
 </Project>

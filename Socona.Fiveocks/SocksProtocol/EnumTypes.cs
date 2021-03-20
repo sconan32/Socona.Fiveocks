@@ -3,10 +3,10 @@
 namespace Socona.Fiveocks.SocksProtocol
 {
 
-    public enum AuthencationMethods
+    public enum SocksAuthencation
     {
         None = 0x00,            //NO AUTHENTICATION REQUIRED 不需要认证       
-        GSSAPI = 0x01,            //GSSAPI, 类似SSH的认证协议   (不支持）
+        GSSAPI = 0x01,          //GSSAPI, 类似SSH的认证协议   (不支持）
         Login = 0x02,           //USERNAME/PASSWORD 用户名密码认证
                                 //0x03-0x7F  IANA ASSIGNED 协会保留方法
                                 //0x80-0xFE  自定义方法
@@ -20,15 +20,25 @@ namespace Socona.Fiveocks.SocksProtocol
     public enum SocksVersions
     {
         Socks5 = 0x05,
-        Socks4 = 0x01,  //Unsupported
+        Socks4 = 0x04,           //Unsupported
+        Socks = 0x01,
         Zero = 0x00
     }
 
-    public enum StreamTypes
+    public enum SocksCommand
     {
-        Stream = 0x01,
-        Bind = 0x02,
-        UDP = 0x03
+        TcpStream = 0x01,
+        TcpBind = 0x02,
+        UDPPort = 0x03,
+                            //Extended
+        TorResolve = 0xF0,
+        TorResolvePtr = 0xF1
+    }
+
+    public enum SocksUserLoginResult
+    {
+        Succeed = 0x00,
+        Denied = 0x01,
     }
 
     public enum SocksAddressType
@@ -38,7 +48,7 @@ namespace Socona.Fiveocks.SocksProtocol
         IPv6 = 0x04
     }
 
-    public enum SockStatus
+    public enum SocksStatus
     {
         Granted = 0x00,
         Failure = 0x01,

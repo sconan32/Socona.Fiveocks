@@ -17,7 +17,7 @@ namespace Socona.Fiveocks.Encryption
         private RSACryptoServiceProvider remotepubkey;
         private DarthEncrypt dc;
         private DarthEncrypt dcc;
-        private AuthencationMethods auth;
+        private SocksAuthencation auth;
 
         public void GenerateKeys()
         {
@@ -54,12 +54,12 @@ namespace Socona.Fiveocks.Encryption
             remotepubkey.FromXmlString(e);
         }
 
-        public void SetType(AuthencationMethods k)
+        public void SetType(SocksAuthencation k)
         {
             auth = k;
         }
 
-        public AuthencationMethods GetAuthType()
+        public SocksAuthencation GetAuthType()
         {
             return auth;
         }
@@ -82,14 +82,14 @@ namespace Socona.Fiveocks.Encryption
                 }
                 switch (this.auth)
                 {
-                    case AuthencationMethods.SocksBoth:
+                    case SocksAuthencation.SocksBoth:
                         //decrypt, then decompress.
                         byte[] data = this.dcc.DecryptBytes(buff);
                         return dcc.DecompressBytes(data);
-                    case AuthencationMethods.SocksCompress:
+                    case SocksAuthencation.SocksCompress:
                         //compress data.
                         return dcc.DecompressBytes(buff);
-                    case AuthencationMethods.SocksEncrypt:
+                    case SocksAuthencation.SocksEncrypt:
                         return dcc.DecryptBytes(buff);
                     default:
                         return buff;
@@ -104,7 +104,7 @@ namespace Socona.Fiveocks.Encryption
         public byte[] ProcessOutputData(byte[] buffer, int offset, int count)
         {
             //realign buffer.
-            if (this.auth == AuthencationMethods.None)
+            if (this.auth == SocksAuthencation.None)
             {
                 return buffer;
             }
@@ -118,14 +118,14 @@ namespace Socona.Fiveocks.Encryption
                 }
                 switch (this.auth)
                 {
-                    case AuthencationMethods.SocksBoth:
+                    case SocksAuthencation.SocksBoth:
                         //compress, then encrypt.
                         byte[] data = dc.CompressBytes(buff, 0, count);
                         return this.dc.EncryptBytes(data);
-                    case AuthencationMethods.SocksCompress:
+                    case SocksAuthencation.SocksCompress:
                         //compress data.
                         return dc.CompressBytes(buff, 0, count);
-                    case AuthencationMethods.SocksEncrypt:
+                    case SocksAuthencation.SocksEncrypt:
                         return dc.EncryptBytes(buff);
                     default:
                         return buffer;

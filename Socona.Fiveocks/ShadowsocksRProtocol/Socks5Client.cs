@@ -11,7 +11,7 @@ using Socona.Fiveocks.Socks5Client.Events;
 using Socona.Fiveocks.TCP;
 
 
-namespace Socona.Fiveocks.Socks5Client
+namespace Socona.Fiveocks.ShadowsocksRProtocol
 {
     //public class Socks5Client
     //{

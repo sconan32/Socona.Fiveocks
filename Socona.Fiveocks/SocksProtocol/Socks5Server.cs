@@ -16,6 +16,8 @@ namespace Socona.Fiveocks.SocksProtocol
     {
         private TcpListener _tcpListener;
 
+
+
         private CancellationTokenSource _cancellation = new CancellationTokenSource();
 
         public NetworkStats Stats { get; private set; }
@@ -84,18 +86,18 @@ namespace Socona.Fiveocks.SocksProtocol
             try
             {
                 this.Stats.AddClient();
-                using SocksInboundEntry socksInboundEntry = new SocksInboundEntry(socket);
+                using SocksInboundEntry socksInboundEntry = new SocksTcpInboundEntry(socket);
                 var request = await socksInboundEntry.RetrieveSocksRequestAsync(_cancellation.Token);
-           
-                using var outboundEntry = await RoutingServiceProvider.Shared.CreateService().CreateOutBoundEntryAsync(request) ?? new DirectOutboundEntry(request);             
 
-                var domainResolvingService = DomainResolvingServiceProvider.Shared.CreateService() ?? new DomainResolvingService();            
+                using var outboundEntry = await RoutingServiceProvider.Shared.CreateService().CreateOutBoundEntryAsync(request) ?? new DirectOutboundEntry(request);
+
+                var domainResolvingService = DomainResolvingServiceProvider.Shared.CreateService() ?? new DomainResolvingService();
                 await request.ResolveDomainAsync(domainResolvingService);
 
                 tunnelDesc = $"{request} <{outboundEntry.DisplayName}> ";
 
                 Debug.WriteLine($"+ {tunnelDesc}");
-                Console.WriteLine($"+ {tunnelDesc}");               
+                Console.WriteLine($"+ {tunnelDesc}");
 
                 if (await socksInboundEntry.ShakeHandAsync(request, outboundEntry, _cancellation.Token))
                 {
@@ -104,9 +106,9 @@ namespace Socona.Fiveocks.SocksProtocol
                     forwardingTunnel.OutCounter = Stats.UpCounter;
                     forwardingTunnel.InboundEntry = socksInboundEntry;
                     forwardingTunnel.OutboundEntry = outboundEntry;
-                    
-                    await forwardingTunnel.ForwardAsync(_cancellation.Token);                  
-                    forwardingTunnel.Dispose();                   
+
+                    await forwardingTunnel.ForwardAsync(_cancellation.Token);
+                    forwardingTunnel.Dispose();
                 }
 
                 Debug.WriteLine($"- {tunnelDesc}");
@@ -119,7 +121,7 @@ namespace Socona.Fiveocks.SocksProtocol
             finally
             {
                 this.Stats.DecreaseClient();
-              
+
             }
 
         }

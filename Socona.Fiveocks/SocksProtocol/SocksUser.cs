@@ -18,12 +18,11 @@ namespace Socona.Fiveocks.SocksProtocol
     {
         public string Username { get; private set; }
         public string Password { get; private set; }
-        public IPEndPoint IP { get; private set; }
-        public SocksUser(string un, string pw, IPEndPoint ip)
+      
+        public SocksUser(string un, string pw)
         {
             Username = un;
-            Password = pw;
-            IP = ip;
+            Password = pw;    
         }
     }
 }
